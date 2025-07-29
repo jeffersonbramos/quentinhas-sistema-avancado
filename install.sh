@@ -1,64 +1,50 @@
-Sim, claro\! É uma ótima ideia para evitar os erros de edição manual e garantir que tudo funcione de uma vez.
+Ok, obrigado pelo print. Analisei o novo erro e este problema é diferente dos anteriores.
 
-Preparei o script completo, já com as **duas correções** que identificamos:
+A boa notícia é que você executou os comandos `chmod` e `sudo` corretamente.
 
-1.  Corrigi a versão do pacote `multer` no arquivo `package.json`.
-2.  Atualizei o nome da imagem do `Evolution API` no arquivo `docker-compose.yml` para a versão oficial e funcional.
+A má notícia é que o conteúdo **DENTRO** do seu arquivo `install.sh` está incorreto.
 
-### Instruções para Usar o Novo Script
+Os erros `Sim:: not found`, `Prepare:: not found`, `multer:: not found` mostram que o terminal está tentando "executar" palavras da nossa conversa. Parece que, sem querer, na hora de criar o arquivo, você copiou o texto das minhas explicações para dentro dele, em vez de copiar **apenas o bloco de código** do script.
 
-Para garantir que não haja conflito com a tentativa anterior, é **muito importante** que você primeiro limpe o ambiente.
-
-#### Passo 1: Limpeza do Ambiente (Importante)
-
-Execute os comandos abaixo, um de cada vez, para remover os arquivos e containers da instalação que falhou.
-
-```bash
-# Para e remove todos os containers Docker que possam estar rodando
-docker stop $(docker ps -aq) && docker rm $(docker ps -aq)
-
-# Remove a pasta do projeto que foi criada pelo script
-rm -rf /root/quentinhas-pro
-
-# Remove a pasta do git clone original
-rm -rf /root/quentinhas-sistema-avancado
-```
-
-#### Passo 2: Criar e Executar o Script Corrigido
-
-Agora, vamos criar um novo arquivo e colar o código corrigido nele.
-
-1.  Crie um novo arquivo de script com o nome `install_corrigido.sh` usando o nano:
-
-    ```bash
-    nano install_corrigido.sh
-    ```
-
-2.  **Copie TODO o código do bloco abaixo.**
-
-3.  **Cole** o código copiado dentro do editor nano.
-
-4.  Salve o arquivo pressionando **Ctrl + O** e depois **Enter**.
-
-5.  Saia do nano pressionando **Ctrl + X**.
-
-6.  Dê permissão de execução ao novo script:
-
-    ```bash
-    chmod +x install_corrigido.sh
-    ```
-
-7.  Execute o script corrigido:
-
-    ```bash
-    sudo ./install_corrigido.sh
-    ```
-
-Com este script, a instalação deve prosseguir do início ao fim sem os erros que encontramos antes.
+**Não se preocupe, vamos corrigir isso de uma vez por todas.** Siga estes passos com muita atenção.
 
 -----
 
-### **↓ COPIE TODO O CÓDIGO ABAIXO ↓**
+### Passo 1: Apagar o Arquivo Errado
+
+Primeiro, vamos apagar o script com o conteúdo errado. Como você já está na pasta correta (`quentinhas-sistema-avancado`), digite este comando:
+
+```bash
+rm install.sh
+```
+
+### Passo 2: Criar o Arquivo Novo e Colar o Código CORRETO
+
+1.  Crie o arquivo novamente, vazio:
+
+    ```bash
+    nano install.sh
+    ```
+
+2.  Agora, com muito cuidado, **copie TODO o código que está dentro do bloco abaixo**. Comece na linha `#!/bin/bash` e vá até a última linha `echo ""`.
+
+3.  **Cole** todo esse bloco de uma só vez na tela preta do nano.
+
+4.  Salve o arquivo: Pressione **Ctrl + O**, depois **Enter**.
+
+5.  Saia do editor: Pressione **Ctrl + X**.
+
+### Passo 3: Executar a Instalação
+
+Agora que temos certeza de que o arquivo tem o conteúdo correto, execute os comandos finais:
+
+```bash
+chmod +x install.sh && sudo ./install.sh
+```
+
+-----
+
+### ↓↓↓ COPIE TODO O CÓDIGO ABAIXO E COLE NO NANO ↓↓↓
 
 ```bash
 #!/bin/bash
