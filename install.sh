@@ -1,12 +1,75 @@
+Sim, claro\! É uma ótima ideia para evitar os erros de edição manual e garantir que tudo funcione de uma vez.
+
+Preparei o script completo, já com as **duas correções** que identificamos:
+
+1.  Corrigi a versão do pacote `multer` no arquivo `package.json`.
+2.  Atualizei o nome da imagem do `Evolution API` no arquivo `docker-compose.yml` para a versão oficial e funcional.
+
+### Instruções para Usar o Novo Script
+
+Para garantir que não haja conflito com a tentativa anterior, é **muito importante** que você primeiro limpe o ambiente.
+
+#### Passo 1: Limpeza do Ambiente (Importante)
+
+Execute os comandos abaixo, um de cada vez, para remover os arquivos e containers da instalação que falhou.
+
+```bash
+# Para e remove todos os containers Docker que possam estar rodando
+docker stop $(docker ps -aq) && docker rm $(docker ps -aq)
+
+# Remove a pasta do projeto que foi criada pelo script
+rm -rf /root/quentinhas-pro
+
+# Remove a pasta do git clone original
+rm -rf /root/quentinhas-sistema-avancado
+```
+
+#### Passo 2: Criar e Executar o Script Corrigido
+
+Agora, vamos criar um novo arquivo e colar o código corrigido nele.
+
+1.  Crie um novo arquivo de script com o nome `install_corrigido.sh` usando o nano:
+
+    ```bash
+    nano install_corrigido.sh
+    ```
+
+2.  **Copie TODO o código do bloco abaixo.**
+
+3.  **Cole** o código copiado dentro do editor nano.
+
+4.  Salve o arquivo pressionando **Ctrl + O** e depois **Enter**.
+
+5.  Saia do nano pressionando **Ctrl + X**.
+
+6.  Dê permissão de execução ao novo script:
+
+    ```bash
+    chmod +x install_corrigido.sh
+    ```
+
+7.  Execute o script corrigido:
+
+    ```bash
+    sudo ./install_corrigido.sh
+    ```
+
+Com este script, a instalação deve prosseguir do início ao fim sem os erros que encontramos antes.
+
+-----
+
+### **↓ COPIE TODO O CÓDIGO ABAIXO ↓**
+
+```bash
 #!/bin/bash
 
 # =================================================================
-# INSTALAÇÃO SISTEMA QUENTINHAS AVANÇADO - HETZNER
+# INSTALAÇÃO SISTEMA QUENTINHAS AVANÇADO - HETZNER (CORRIGIDO)
 # Sistema Completo: API + Painel + Banco + WhatsApp + N8N
 # =================================================================
 
-echo "🚀 INSTALAÇÃO SISTEMA QUENTINHAS AVANÇADO"
-echo "========================================"
+echo "🚀 INSTALAÇÃO SISTEMA QUENTINHAS AVANÇADO (VERSÃO CORRIGIDA)"
+echo "=========================================================="
 echo ""
 
 # Cores para output
@@ -23,8 +86,8 @@ log_error() { echo -e "${RED}❌ $1${NC}"; }
 
 # Verificar se é root
 if [[ $EUID -ne 0 ]]; then
-   log_error "Execute como root: sudo su -"
-   exit 1
+    log_error "Execute como root: sudo su -"
+    exit 1
 fi
 
 # Atualizar sistema
@@ -96,7 +159,7 @@ cat > package.json << 'EOF'
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "axios": "^1.6.2",
-    "multer": "^1.4.5",
+    "multer": "^1.4.4",
     "socket.io": "^4.7.4",
     "node-cron": "^3.0.3",
     "winston": "^3.11.0",
@@ -180,7 +243,7 @@ services:
       - quentinhas-network
 
   evolution:
-    image: davidson/evolution-api:latest
+    image: atendai/evolution-api:latest
     container_name: quentinhas-evolution
     environment:
       - SERVER_TYPE=http
@@ -254,7 +317,7 @@ model User {
   role      Role     @default(ADMIN)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@map("users")
 }
 
@@ -271,10 +334,10 @@ model Customer {
   lastOrderAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
-  orders        Order[]
-  interactions  Interaction[]
-  
+
+  orders       Order[]
+  interactions Interaction[]
+
   @@map("customers")
 }
 
@@ -293,9 +356,9 @@ model MenuItem {
   prepTime    Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  orderItems  OrderItem[]
-  
+
+  orderItems OrderItem[]
+
   @@map("menu_items")
 }
 
@@ -318,10 +381,10 @@ model Order {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   deliveredAt     DateTime?
-  
-  items           OrderItem[]
-  statusHistory   OrderStatusHistory[]
-  
+
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+
   @@map("orders")
 }
 
@@ -335,7 +398,7 @@ model OrderItem {
   unitPrice  Float
   totalPrice Float
   notes      String?
-  
+
   @@map("order_items")
 }
 
@@ -346,7 +409,7 @@ model OrderStatusHistory {
   status    OrderStatus
   timestamp DateTime    @default(now())
   notes     String?
-  
+
   @@map("order_status_history")
 }
 
@@ -360,22 +423,22 @@ model Interaction {
   intent       String?
   satisfaction Int?
   createdAt    DateTime        @default(now())
-  
+
   @@map("interactions")
 }
 
 model Analytics {
-  id              String   @id @default(cuid())
-  date            DateTime @default(now())
-  totalOrders     Int      @default(0)
-  totalRevenue    Float    @default(0)
-  avgTicket       Float    @default(0)
-  newCustomers    Int      @default(0)
-  conversionRate  Float    @default(0)
-  topItem         String?
-  busyHour        Int?
+  id             String   @id @default(cuid())
+  date           DateTime @default(now())
+  totalOrders    Int      @default(0)
+  totalRevenue   Float    @default(0)
+  avgTicket      Float    @default(0)
+  newCustomers   Int      @default(0)
+  conversionRate Float    @default(0)
+  topItem        String?
+  busyHour       Int?
   avgDeliveryTime Int?
-  
+
   @@unique([date])
   @@map("analytics")
 }
@@ -384,7 +447,7 @@ model Setting {
   id    String @id @default(cuid())
   key   String @unique
   value String
-  
+
   @@map("settings")
 }
 
@@ -1169,9 +1232,9 @@ fi
 
 echo ""
 echo "🔗 Acessos:"
-echo "   📊 Painel: http://localhost:3000"
-echo "   🤖 N8N: http://localhost:5678"
-echo "   📱 WhatsApp: http://localhost:8080"
+echo "    📊 Painel: http://localhost:3000"
+echo "    🤖 N8N: http://localhost:5678"
+echo "    📱 WhatsApp: http://localhost:8080"
 EOF
 
 chmod +x check-status.sh
@@ -1216,30 +1279,30 @@ chmod +x backup-system.sh
 log_success "🎉 INSTALAÇÃO CONCLUÍDA COM SUCESSO!"
 echo ""
 echo "📋 SISTEMA INSTALADO:"
-echo "   🌐 Painel Admin: http://localhost:3000"
-echo "   🔌 API REST: http://localhost:3000/api"
-echo "   🤖 N8N: http://localhost:5678"
-echo "   📱 WhatsApp API: http://localhost:8080"
+echo "    🌐 Painel Admin: http://localhost:3000"
+echo "    🔌 API REST: http://localhost:3000/api"
+echo "    🤖 N8N: http://localhost:5678"
+echo "    📱 WhatsApp API: http://localhost:8080"
 echo ""
 echo "🔑 ACESSO PAINEL:"
-echo "   📧 Email: admin@quentinhas.com"
-echo "   🔐 Senha: admin123"
+echo "    📧 Email: admin@quentinhas.com"
+echo "    🔐 Senha: admin123"
 echo ""
 echo "📊 BANCO DE DADOS:"
-echo "   🐘 PostgreSQL: localhost:5432"
-echo "   👤 Usuário: quentinhas"
-echo "   🔐 Senha: quentinhas123"
+echo "    🐘 PostgreSQL: localhost:5432"
+echo "    👤 Usuário: quentinhas"
+echo "    🔐 Senha: quentinhas123"
 echo ""
 echo "🛠️ COMANDOS ÚTEIS:"
-echo "   ./check-status.sh     - Verificar status"
-echo "   ./restart-system.sh   - Reiniciar sistema"
-echo "   ./backup-system.sh    - Fazer backup"
+echo "    ./check-status.sh     - Verificar status"
+echo "    ./restart-system.sh   - Reiniciar sistema"
+echo "    ./backup-system.sh    - Fazer backup"
 echo ""
 echo "📱 PRÓXIMOS PASSOS:"
-echo "   1. Acessar painel: http://localhost:3000"
-echo "   2. Configurar WhatsApp no Evolution API"
-echo "   3. Personalizar cardápio"
-echo "   4. Testar sistema"
+echo "    1. Acessar painel: http://$(curl -s ifconfig.me):3000"
+echo "    2. Configurar WhatsApp no Evolution API (http://$(curl -s ifconfig.me):8080)"
+echo "    3. Personalizar cardápio e configurações"
+echo "    4. Testar sistema"
 echo ""
 log_success "✅ Sistema 100% pronto para uso!"
 
@@ -1250,5 +1313,5 @@ else
 fi
 
 echo ""
-echo "🎯 ACESSE AGORA: http://$(curl -s ifconfig.me):3000"
+echo "🎯 ACESSE AGORA O PAINEL PELO IP PÚBLICO: http://$(curl -s ifconfig.me):3000"
 echo ""
