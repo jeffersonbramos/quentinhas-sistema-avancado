@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =================================================================
-# INSTALAÇÃO SISTEMA QUENTINHAS AVANÇADO
+# INSTALAÇÃO SISTEMA QUENTINHAS AVANÇADO - HETZNER
 # Sistema Completo: API + Painel + Banco + WhatsApp + N8N
 # =================================================================
 
@@ -9,71 +9,48 @@ echo "🚀 INSTALAÇÃO SISTEMA QUENTINHAS AVANÇADO"
 echo "========================================"
 echo ""
 
-# Verificar se é root
-if [[ $EUID -eq 0 ]]; then
-   echo "❌ Não execute como root. Use um usuário normal com sudo."
-   exit 1
-fi
-
 # Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Função para log colorido
-log_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
-}
+log_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
+log_success() { echo -e "${GREEN}✅ $1${NC}"; }
+log_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+log_error() { echo -e "${RED}❌ $1${NC}"; }
 
-log_success() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
-
-log_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
-
-log_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
-
-# Verificar conectividade
-log_info "Verificando conectividade..."
-if ! ping -c 1 google.com &> /dev/null; then
-    log_error "Sem conexão com internet. Verifique sua rede."
-    exit 1
+# Verificar se é root
+if [[ $EUID -ne 0 ]]; then
+   log_error "Execute como root: sudo su -"
+   exit 1
 fi
-log_success "Conectividade OK"
 
 # Atualizar sistema
 log_info "Atualizando sistema..."
-sudo apt update && sudo apt upgrade -y
+apt update && apt upgrade -y
 
-# Instalar dependências básicas
+# Instalar dependências
 log_info "Instalando dependências..."
-sudo apt install -y curl wget git unzip software-properties-common apt-transport-https ca-certificates gnupg lsb-release
+apt install -y curl wget git unzip software-properties-common apt-transport-https ca-certificates gnupg lsb-release nano
 
 # Instalar Docker
 log_info "Instalando Docker..."
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
-# Adicionar usuário ao grupo docker
-sudo usermod -aG docker $USER
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 # Instalar Docker Compose standalone
 log_info "Instalando Docker Compose..."
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
 
 # Instalar Node.js 18
 log_info "Instalando Node.js 18..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt-get install -y nodejs
 
 # Verificar instalações
 log_info "Verificando instalações..."
@@ -83,7 +60,7 @@ docker --version
 docker-compose --version
 
 # Criar diretório do projeto
-PROJECT_DIR="$HOME/quentinhas-pro"
+PROJECT_DIR="/root/quentinhas-pro"
 log_info "Criando projeto em $PROJECT_DIR"
 mkdir -p $PROJECT_DIR
 cd $PROJECT_DIR
@@ -108,8 +85,7 @@ cat > package.json << 'EOF'
     "dev": "nodemon server.js",
     "setup": "node setup/init-db.js",
     "migrate": "npx prisma migrate dev",
-    "seed": "node setup/seed.js",
-    "backup": "node scripts/backup.js"
+    "seed": "node setup/seed.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -139,31 +115,16 @@ EOF
 # Criar .env
 log_info "Criando arquivo .env..."
 cat > .env << 'EOF'
-# Database
 DATABASE_URL="postgresql://quentinhas:quentinhas123@localhost:5432/quentinhas"
-
-# Redis
 REDIS_URL="redis://localhost:6379"
-
-# JWT
 JWT_SECRET="quentinhas_jwt_secret_super_seguro_mude_em_producao"
-
-# Server
 PORT=3000
 NODE_ENV=production
-
-# WhatsApp
 EVOLUTION_API_URL="http://localhost:8080"
 EVOLUTION_API_KEY="evolution_api_key"
-
-# N8N
 N8N_WEBHOOK_URL="http://localhost:5678"
-
-# Upload
 MAX_FILE_SIZE=10485760
 UPLOAD_PATH="./uploads"
-
-# Business Settings
 BUSINESS_NAME="Quentinhas da Casa"
 BUSINESS_PHONE="(11) 99999-9999"
 DELIVERY_FEE=3.00
@@ -176,7 +137,6 @@ cat > docker-compose.yml << 'EOF'
 version: '3.8'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15
     container_name: quentinhas-postgres
@@ -194,7 +154,6 @@ services:
     networks:
       - quentinhas-network
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: quentinhas-redis
@@ -206,7 +165,6 @@ services:
     networks:
       - quentinhas-network
 
-  # MongoDB for Evolution API
   mongo:
     image: mongo:6
     container_name: quentinhas-mongo
@@ -221,7 +179,6 @@ services:
     networks:
       - quentinhas-network
 
-  # Evolution API (WhatsApp)
   evolution:
     image: davidson/evolution-api:latest
     container_name: quentinhas-evolution
@@ -248,7 +205,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # N8N Automation
   n8n:
     image: n8nio/n8n:latest
     container_name: quentinhas-n8n
@@ -494,7 +450,6 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Criando dados iniciais...');
 
-  // Criar usuário admin
   const hashedPassword = await bcrypt.hash('admin123', 10);
   await prisma.user.upsert({
     where: { email: 'admin@quentinhas.com' },
@@ -507,7 +462,6 @@ async function main() {
     }
   });
 
-  // Criar itens do menu
   const menuItems = [
     {
       name: 'Bife Acebolado',
@@ -563,17 +517,6 @@ async function main() {
       calories: 720,
       ingredients: ['Massa de lasanha', 'Carne moída', 'Molho de tomate', 'Queijo mussarela'],
       allergens: ['Glúten', 'Lactose']
-    },
-    {
-      name: 'Salada Caesar',
-      description: 'Salada com alface, croutons, queijo parmesão e molho caesar com frango grelhado',
-      price: 14.00,
-      category: 'Saladas',
-      available: true,
-      prepTime: 15,
-      calories: 380,
-      ingredients: ['Alface', 'Frango', 'Queijo parmesão', 'Croutons', 'Molho caesar'],
-      allergens: ['Lactose', 'Glúten']
     }
   ];
 
@@ -585,7 +528,6 @@ async function main() {
     });
   }
 
-  // Configurações do sistema
   const settings = [
     { key: 'business_name', value: 'Quentinhas da Casa' },
     { key: 'business_phone', value: '(11) 99999-9999' },
@@ -641,7 +583,6 @@ const socketIo = require('socket.io');
 const path = require('path');
 require('dotenv').config();
 
-// Inicialização
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -652,7 +593,6 @@ const io = socketIo(server, {
 });
 const prisma = new PrismaClient();
 
-// Middlewares
 app.use(helmet());
 app.use(cors());
 app.use(compression());
@@ -660,7 +600,6 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -668,19 +607,12 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Servir arquivos estáticos
 app.use(express.static('public'));
 
-// =================================================================
-// ROTAS DA API
-// =================================================================
-
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Dashboard analytics
 app.get('/api/dashboard', async (req, res) => {
   try {
     const today = new Date();
@@ -688,7 +620,6 @@ app.get('/api/dashboard', async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Estatísticas de hoje
     const [todayOrders, todayRevenue, totalCustomers, topItems] = await Promise.all([
       prisma.order.count({
         where: { createdAt: { gte: today, lt: tomorrow } }
@@ -714,7 +645,7 @@ app.get('/api/dashboard', async (req, res) => {
       avgTicket,
       totalCustomers,
       topItems,
-      conversionRate: 85 // Placeholder
+      conversionRate: 85
     });
   } catch (error) {
     console.error('Dashboard error:', error);
@@ -722,7 +653,6 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// Menu management
 app.get('/api/menu', async (req, res) => {
   try {
     const { available } = req.query;
@@ -769,7 +699,6 @@ app.put('/api/menu/:id', async (req, res) => {
   }
 });
 
-// Orders management
 app.get('/api/orders', async (req, res) => {
   try {
     const { status, date } = req.query;
@@ -813,7 +742,6 @@ app.put('/api/orders/:id/status', async (req, res) => {
       include: { customer: true }
     });
     
-    // Criar histórico
     await prisma.orderStatusHistory.create({
       data: {
         orderId: order.id,
@@ -829,7 +757,6 @@ app.put('/api/orders/:id/status', async (req, res) => {
   }
 });
 
-// Customers
 app.get('/api/customers', async (req, res) => {
   try {
     const customers = await prisma.customer.findMany({
@@ -850,7 +777,6 @@ app.get('/api/customers', async (req, res) => {
   }
 });
 
-// Webhook WhatsApp
 app.post('/api/webhook/whatsapp', async (req, res) => {
   try {
     const { key, message } = req.body;
@@ -862,7 +788,6 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     const phone = key.remoteJid.replace('@s.whatsapp.net', '');
     const messageText = message.conversation || message.extendedTextMessage?.text || '';
     
-    // Buscar ou criar cliente
     let customer = await prisma.customer.findUnique({
       where: { phone }
     });
@@ -876,7 +801,6 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
       });
     }
     
-    // Registrar interação
     await prisma.interaction.create({
       data: {
         customerId: customer.id,
@@ -893,14 +817,10 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
   }
 });
 
-// Página principal (painel)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// =================================================================
-// WEBSOCKET
-// =================================================================
 io.on('connection', (socket) => {
   console.log('Cliente conectado:', socket.id);
   
@@ -914,9 +834,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// =================================================================
-// INICIALIZAÇÃO
-// =================================================================
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, '0.0.0.0', () => {
@@ -925,7 +842,6 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🔌 API: http://localhost:${PORT}/api`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('Fechando servidor...');
   await prisma.$disconnect();
@@ -933,16 +849,15 @@ process.on('SIGTERM', async () => {
 });
 EOF
 
-# Copiar painel HTML para public
-log_info "Copiando painel administrativo..."
-cp /dev/stdin public/index.html << 'EOF'
+# Criar painel HTML
+log_info "Criando painel administrativo..."
+cat > public/index.html << 'EOF'
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quentinhas Pro - Painel Administrativo</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
     <style>
@@ -960,17 +875,10 @@ cp /dev/stdin public/index.html << 'EOF'
             justify-content: space-between;
             align-items: center;
         }
-        .logo {
-            color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
+        .logo { color: white; font-size: 1.5rem; font-weight: bold; }
         .status { color: white; display: flex; align-items: center; gap: 1rem; }
         .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #4CAF50;
+            width: 12px; height: 12px; border-radius: 50%; background: #4CAF50;
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
@@ -978,91 +886,42 @@ cp /dev/stdin public/index.html << 'EOF'
             70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
             100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
         }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
         .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem; margin-bottom: 2rem;
         }
         .card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95); border-radius: 16px;
+            padding: 1.5rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #333;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-        }
+        .card-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; color: #333; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
         .stat-item {
-            text-align: center;
-            padding: 1rem;
+            text-align: center; padding: 1rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            color: white;
+            border-radius: 12px; color: white;
         }
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-        .stat-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
+        .stat-value { font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem; }
+        .stat-label { font-size: 0.9rem; opacity: 0.9; }
         .btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            margin: 0.25rem;
+            padding: 0.5rem 1rem; border: none; border-radius: 8px;
+            cursor: pointer; font-weight: 500; transition: all 0.3s ease; margin: 0.25rem;
         }
         .btn-primary { background: #667eea; color: white; }
         .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-        .table th, .table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        .table th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
+        .table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .table th, .table td { padding: 1rem; text-align: left; border-bottom: 1px solid #eee; }
+        .table th { background: #f8f9fa; font-weight: 600; }
         .menu-item {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: 1rem;
-            align-items: center;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
+            display: grid; grid-template-columns: 1fr auto auto; gap: 1rem;
+            align-items: center; padding: 1rem; background: #f8f9fa;
+            border-radius: 8px; margin-bottom: 0.5rem;
         }
         .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
+            padding: 0.25rem 0.75rem; border-radius: 20px;
+            font-size: 0.8rem; font-weight: 500;
         }
         .status-CONFIRMED { background: #fff3cd; color: #856404; }
         .status-PREPARING { background: #d4edda; color: #155724; }
@@ -1082,13 +941,11 @@ cp /dev/stdin public/index.html << 'EOF'
     </div>
 
     <div class="container">
-        <!-- Ações Rápidas -->
         <div style="margin-bottom: 2rem;">
             <button class="btn btn-primary" onclick="refreshData()">🔄 Atualizar</button>
             <button class="btn btn-success" onclick="showAddMenuModal()">➕ Adicionar Prato</button>
         </div>
 
-        <!-- Dashboard -->
         <div class="dashboard-grid">
             <div class="card">
                 <h3 class="card-title">📈 Estatísticas Hoje</h3>
@@ -1113,13 +970,11 @@ cp /dev/stdin public/index.html << 'EOF'
             </div>
         </div>
 
-        <!-- Cardápio -->
         <div class="card">
             <h3 class="card-title">🍽️ Cardápio</h3>
             <div id="menuItems"></div>
         </div>
 
-        <!-- Pedidos -->
         <div class="card">
             <h3 class="card-title">📋 Pedidos Recentes</h3>
             <table class="table">
@@ -1139,18 +994,14 @@ cp /dev/stdin public/index.html << 'EOF'
 
     <script>
         const socket = io();
-        
-        // Conectar ao socket
         socket.emit('join_admin');
         
-        // Atualizar hora
         function updateTime() {
             document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('pt-BR');
         }
         setInterval(updateTime, 1000);
         updateTime();
 
-        // Carregar dados do dashboard
         async function loadDashboard() {
             try {
                 const response = await axios.get('/api/dashboard');
@@ -1165,7 +1016,6 @@ cp /dev/stdin public/index.html << 'EOF'
             }
         }
 
-        // Carregar cardápio
         async function loadMenu() {
             try {
                 const response = await axios.get('/api/menu');
@@ -1193,7 +1043,6 @@ cp /dev/stdin public/index.html << 'EOF'
             }
         }
 
-        // Carregar pedidos
         async function loadOrders() {
             try {
                 const response = await axios.get('/api/orders');
@@ -1224,7 +1073,6 @@ cp /dev/stdin public/index.html << 'EOF'
             }
         }
 
-        // Toggle item do menu
         async function toggleItem(id, available) {
             try {
                 await axios.put(`/api/menu/${id}`, { available });
@@ -1234,7 +1082,6 @@ cp /dev/stdin public/index.html << 'EOF'
             }
         }
 
-        // Atualizar status do pedido
         async function updateOrderStatus(id, status) {
             try {
                 await axios.put(`/api/orders/${id}/status`, { status });
@@ -1244,14 +1091,16 @@ cp /dev/stdin public/index.html << 'EOF'
             }
         }
 
-        // Atualizar todos os dados
         function refreshData() {
             loadDashboard();
             loadMenu();
             loadOrders();
         }
 
-        // Socket events
+        function showAddMenuModal() {
+            alert('Funcionalidade em desenvolvimento!');
+        }
+
         socket.on('order_updated', () => {
             loadOrders();
             loadDashboard();
@@ -1261,10 +1110,9 @@ cp /dev/stdin public/index.html << 'EOF'
             loadMenu();
         });
 
-        // Inicialização
         document.addEventListener('DOMContentLoaded', () => {
             refreshData();
-            setInterval(refreshData, 30000); // Auto-refresh a cada 30s
+            setInterval(refreshData, 30000);
         });
     </script>
 </body>
@@ -1290,34 +1138,29 @@ sleep 10
 # Criar scripts úteis
 log_info "Criando scripts úteis..."
 
-# Script de status
 cat > check-status.sh << 'EOF'
 #!/bin/bash
 echo "=== STATUS SISTEMA QUENTINHAS PRO ==="
 echo ""
 
-# API
 if curl -s http://localhost:3000/api/health | grep -q "OK"; then
     echo "✅ API: Online"
 else
     echo "❌ API: Offline"
 fi
 
-# Banco PostgreSQL
 if docker exec quentinhas-postgres pg_isready -U quentinhas >/dev/null 2>&1; then
     echo "✅ PostgreSQL: Online"
 else
     echo "❌ PostgreSQL: Offline"
 fi
 
-# Evolution API
 if curl -s http://localhost:8080/instance/fetchInstances >/dev/null 2>&1; then
     echo "✅ Evolution API: Online"
 else
     echo "❌ Evolution API: Offline"
 fi
 
-# N8N
 if curl -s http://localhost:5678 >/dev/null 2>&1; then
     echo "✅ N8N: Online"
 else
@@ -1333,21 +1176,13 @@ EOF
 
 chmod +x check-status.sh
 
-# Script de reinicialização
 cat > restart-system.sh << 'EOF'
 #!/bin/bash
 echo "🔄 Reiniciando sistema..."
 
-# Parar API
 pkill -f "node server.js"
-
-# Reiniciar containers
 docker-compose restart
-
-# Aguardar
 sleep 30
-
-# Iniciar API
 npm start &
 
 echo "✅ Sistema reiniciado!"
@@ -1356,7 +1191,6 @@ EOF
 
 chmod +x restart-system.sh
 
-# Script de backup
 cat > backup-system.sh << 'EOF'
 #!/bin/bash
 BACKUP_DIR="backups/$(date +%Y-%m-%d_%H-%M-%S)"
@@ -1364,19 +1198,12 @@ mkdir -p $BACKUP_DIR
 
 echo "💾 Criando backup..."
 
-# Backup PostgreSQL
 docker exec quentinhas-postgres pg_dump -U quentinhas quentinhas > $BACKUP_DIR/database.sql
-
-# Backup uploads
 cp -r uploads $BACKUP_DIR/ 2>/dev/null || true
-
-# Backup configurações
 cp .env $BACKUP_DIR/
 cp docker-compose.yml $BACKUP_DIR/
 
 echo "✅ Backup criado em: $BACKUP_DIR"
-
-# Manter apenas últimos 7 backups
 find backups/ -type d -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
 EOF
 
@@ -1416,16 +1243,12 @@ echo "   4. Testar sistema"
 echo ""
 log_success "✅ Sistema 100% pronto para uso!"
 
-# Testar se tudo está funcionando
-log_info "Testando sistema..."
-sleep 5
-
 if curl -s http://localhost:3000/api/health | grep -q "OK"; then
     log_success "✅ API funcionando!"
 else
-    log_warning "⚠️ API não respondeu, verifique os logs"
+    log_warning "⚠️ API não respondeu, aguarde alguns segundos"
 fi
 
 echo ""
-echo "🎯 ACESSE AGORA: http://localhost:3000"
+echo "🎯 ACESSE AGORA: http://$(curl -s ifconfig.me):3000"
 echo ""
