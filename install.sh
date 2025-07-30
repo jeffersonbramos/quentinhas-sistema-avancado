@@ -276,7 +276,7 @@ networks:
     driver: bridge
 EOF
 
-log_info "Criando schema do Prisma com @unique no MenuItem..."
+log_info "Criando schema do Prisma com comentário corrigido..."
 cat > prisma/schema.prisma << 'EOF'
 generator client {
   provider = "prisma-client-js"
@@ -321,7 +321,7 @@ model Customer {
 
 model MenuItem {
   id          String   @id @default(cuid())
-  name        String   @unique  # Adicionado @unique conforme solicitado
+  name        String   @unique  // Adicionado conforme solicitado
   description String?
   price       Float
   category    String?
