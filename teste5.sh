@@ -5418,4 +5418,4 @@ echo "Para verificar o status completo a qualquer momento:"
 echo "cd $PROJECT_DIR && ./manage-system.sh status"
 echo ""
 
-exit 0"
+exit 0
