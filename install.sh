@@ -174,8 +174,8 @@ services:
     image: postgres:15
     container_name: quentinhas-postgres
     environment:
-      POSTGRES_DB: quentinhas
-      POSTGRES_USER: quentinhas
+      POSTGRES_DB: quentininhas
+      POSTGRES_USER: quentininhas
       POSTGRES_PASSWORD: quentinhas123
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
@@ -276,7 +276,7 @@ networks:
     driver: bridge
 EOF
 
-log_info "Criando schema do Prisma com comentário corrigido..."
+log_info "Criando schema do Prisma com configuração de seeding..."
 cat > prisma/schema.prisma << 'EOF'
 generator client {
   provider = "prisma-client-js"
@@ -460,12 +460,72 @@ enum InteractionType {
 }
 EOF
 
+log_info "Criando setup/seed.js..."
+cat > setup/seed.js << 'EOF'
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+
+const prisma = new PrismaClient();
+
+async function main() {
+  // Criar usuário admin
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  await prisma.user.create({
+    data: {
+      email: 'admin@quentinhas.com',
+      password: hashedPassword,
+      name: 'Admin Quentinhas',
+      role: 'ADMIN',
+    },
+  });
+
+  // Criar itens de cardápio iniciais
+  await prisma.menuItem.createMany({
+    data: [
+      {
+        name: 'Arroz com Frango',
+        description: 'Arroz soltinho com frango grelhado e legumes',
+        price: 15.00,
+        category: 'Prato Principal',
+        available: true,
+        ingredients: ['arroz', 'frango', 'cenoura', 'ervilha'],
+        allergens: ['gluten'],
+        calories: 450,
+        prepTime: 20,
+      },
+      {
+        name: 'Feijão com Carne',
+        description: 'Feijão preto com carne bovina e temperos',
+        price: 18.00,
+        category: 'Prato Principal',
+        available: true,
+        ingredients: ['feijão', 'carne', 'alho', 'cebola'],
+        allergens: [],
+        calories: 500,
+        prepTime: 25,
+      },
+    ],
+  });
+
+  console.log('✅ Dados iniciais criados com sucesso!');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+EOF
+
 log_info "Iniciando containers do banco de dados..."
 docker-compose up -d postgres redis mongo
 
 log_info "Aguardando bancos de dados iniciarem..."
 # Verificar se o PostgreSQL está pronto antes de prosseguir
-until docker exec quentinhas-postgres pg_isready -U quentinhas >/dev/null 2>&1; do
+until docker exec quentinhas-postgres pg_isready -U quentininhas >/dev/null 2>&1; do
     log_warning "Aguardando PostgreSQL iniciar... (pode levar até 1 minuto)"
     sleep 5
 done
@@ -477,11 +537,8 @@ npm install
 log_info "Gerando cliente Prisma..."
 npx prisma generate
 
-log_info "Executando migrações do banco..."
+log_info "Executando migrações do banco e seeding..."
 npx prisma migrate dev --name init
-
-log_info "Adicionando dados iniciais..."
-node setup/seed.js
 
 log_info "Criando servidor principal..."
 cat > server.js << 'EOF'
@@ -775,7 +832,7 @@ EOF
 # =================================================================
 
 log_purple "Criando painel administrativo profissional..."
-cat > public/index.html << EOF
+cat > public/index.html << 'EOF'
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1822,7 +1879,7 @@ else
     echo "❌ API: Offline"
 fi
 
-if docker exec quentinhas-postgres pg_isready -U quentinhas >/dev/null 2>&1; then
+if docker exec quentinhas-postgres pg_isready -U quentininhas >/dev/null 2>&1; then
     echo "✅ PostgreSQL: Online"
 else
     echo "❌ PostgreSQL: Offline"
