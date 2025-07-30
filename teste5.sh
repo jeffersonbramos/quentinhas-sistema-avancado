@@ -1024,6 +1024,7 @@ const logger = winston.createLogger({
 });
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: { origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }
@@ -1948,8 +1949,8 @@ async function invalidateOrderCache() {
 }
 
 // =================================================================
-# PÁGINAS WEB PROTEGIDAS
-# =================================================================
+// PÁGINAS WEB PROTEGIDAS
+// =================================================================
 
 const requireWebAuth = (req, res, next) => {
   if (!req.session.userId) {
@@ -1997,9 +1998,9 @@ app.get('/metrics', (req, res) => {
 
 app.use(express.static('public'));
 
-# =================================================================
-# WEBSOCKET AVANÇADO
-# =================================================================
+// =================================================================
+// WEBSOCKET AVANÇADO
+// =================================================================
 
 io.on('connection', (socket) => {
   logger.info(`Cliente conectado: ${socket.id}`);
@@ -2014,9 +2015,9 @@ io.on('connection', (socket) => {
   });
 });
 
-# =================================================================
-# TAREFAS AUTOMATIZADAS
-# =================================================================
+// =================================================================
+// TAREFAS AUTOMATIZADAS
+// =================================================================
 
 // Backup automático diário
 cron.schedule(process.env.BACKUP_INTERVAL || '0 2 * * *', async () => {
@@ -2142,6 +2143,231 @@ EOF
 # =================================================================
 
 log_purple "Criando páginas web avançadas..."
+
+# Página de Login
+cat > public/login.html << 'EOF'
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Quentinhas Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --error: #ef4444;
+            --gray-50: #f8fafc;
+            --gray-800: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 3rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #5046e5;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: var(--error);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            margin-left: 0.5rem;
+        }
+
+        .loading.show {
+            display: inline-block;
+        }
+
+        .credentials {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .credentials strong {
+            color: var(--gray-800);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🍽️ Quentinhas Pro</div>
+        <p class="subtitle">Sistema de Gestão Avançado</p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn" id="loginBtn">
+                Entrar
+                <i class="fas fa-spinner fa-spin loading" id="loading"></i>
+            </button>
+        </form>
+        
+        <div class="credentials">
+            <strong>Credenciais de Acesso:</strong><br>
+            Email: admin@quentinhas.com<br>
+            Senha: admin123
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Reset error
+            errorMessage.style.display = 'none';
+            
+            // Show loading
+            loginBtn.disabled = true;
+            loading.classList.add('show');
+            
+            try {
+                const response = await axios.post('/api/auth/login', {
+                    email,
+                    password
+                });
+                
+                // Save token
+                localStorage.setItem('token', response.data.token);
+                
+                // Redirect to dashboard
+                window.location.href = '/dashboard';
+                
+            } catch (error) {
+                console.error('Erro no login:', error);
+                
+                let message = 'Erro ao fazer login';
+                if (error.response?.data?.error) {
+                    message = error.response.data.error;
+                }
+                
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                
+                // Reset button
+                loginBtn.disabled = false;
+                loading.classList.remove('show');
+            }
+        });
+        
+        // Auto-fill credentials for demo
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('email').value = 'admin@quentinhas.com';
+            document.getElementById('password').value = 'admin123';
+        });
+    </script>
+</body>
+</html>
+EOF
 
 # Dashboard Avançado
 cat > public/dashboard.html << 'EOF'
@@ -4377,6 +4603,13 @@ EOF
 
 log_info "Configurando Nginx com HTTPS..."
 
+# Criar arquivo de configuração Nginx com rate limiting no contexto http
+cat > /etc/nginx/conf.d/rate-limiting.conf << 'EOF'
+# Rate Limiting Zones
+limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+EOF
+
 cat > /etc/nginx/sites-available/quentinhas << EOF
 server {
     listen 80;
@@ -4403,10 +4636,6 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
     add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-    
-    # Rate Limiting
-    limit_req_zone \$binary_remote_addr zone=login:10m rate=5r/m;
-    limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
     
     # Main Application
     location / {
@@ -4472,41 +4701,7 @@ server {
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
 }
 
-# WhatsApp Evolution API
-server {
-    listen 8080;
-    server_name $PUBLIC_IP;
-    
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
 
-# N8N
-server {
-    listen 5678;
-    server_name $PUBLIC_IP;
-    
-    location / {
-        proxy_pass http://localhost:5678;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
 EOF
 
 # Criar certificado SSL auto-assinado
