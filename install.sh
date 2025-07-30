@@ -175,7 +175,7 @@ services:
     container_name: quentinhas-postgres
     environment:
       POSTGRES_DB: quentinhas
-      POSTGRES_USER: quentininhas
+      POSTGRES_USER: quentinhas
       POSTGRES_PASSWORD: quentinhas123
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
@@ -464,7 +464,12 @@ log_info "Iniciando containers do banco de dados..."
 docker-compose up -d postgres redis mongo
 
 log_info "Aguardando bancos de dados iniciarem..."
-sleep 30
+# Verificar se o PostgreSQL está pronto antes de prosseguir
+until docker exec quentinhas-postgres pg_isready -U quentinhas >/dev/null 2>&1; do
+    log_warning "Aguardando PostgreSQL iniciar... (pode levar até 1 minuto)"
+    sleep 5
+done
+log_success "PostgreSQL está pronto!"
 
 log_info "Instalando dependências Node.js..."
 npm install
@@ -475,8 +480,8 @@ npx prisma generate
 log_info "Executando migrações do banco..."
 npx prisma migrate dev --name init
 
-# NOTA: Removido o comando `node setup/seed.js` automaticamente
-# Você pode cadastrar os pratos manualmente pelo painel após a instalação
+log_info "Adicionando dados iniciais..."
+node setup/seed.js
 
 log_info "Criando servidor principal..."
 cat > server.js << 'EOF'
