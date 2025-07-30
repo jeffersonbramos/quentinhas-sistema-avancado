@@ -175,7 +175,7 @@ services:
     container_name: quentinhas-postgres
     environment:
       POSTGRES_DB: quentinhas
-      POSTGRES_USER: quentinhas
+      POSTGRES_USER: quentininhas
       POSTGRES_PASSWORD: quentinhas123
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
@@ -276,7 +276,7 @@ networks:
     driver: bridge
 EOF
 
-log_info "Criando schema do Prisma..."
+log_info "Criando schema do Prisma com @unique no MenuItem..."
 cat > prisma/schema.prisma << 'EOF'
 generator client {
   provider = "prisma-client-js"
@@ -321,7 +321,7 @@ model Customer {
 
 model MenuItem {
   id          String   @id @default(cuid())
-  name        String
+  name        String   @unique  # Adicionado @unique conforme solicitado
   description String?
   price       Float
   category    String?
@@ -475,131 +475,8 @@ npx prisma generate
 log_info "Executando migrações do banco..."
 npx prisma migrate dev --name init
 
-log_info "Criando dados iniciais..."
-cat > setup/seed.js << 'EOF'
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
-
-const prisma = new PrismaClient();
-
-async function main() {
-  console.log('🌱 Criando dados iniciais...');
-
-  const hashedPassword = await bcrypt.hash('admin123', 10);
-  await prisma.user.upsert({
-    where: { email: 'admin@quentinhas.com' },
-    update: {},
-    create: {
-      email: 'admin@quentinhas.com',
-      password: hashedPassword,
-      name: 'Administrador',
-      role: 'ADMIN'
-    }
-  });
-
-  const menuItems = [
-    {
-      name: 'Bife Acebolado',
-      description: 'Bife grelhado com cebolas refogadas, arroz branco, feijão carioca e batata frita',
-      price: 18.00,
-      category: 'Pratos Principais',
-      available: true,
-      prepTime: 25,
-      calories: 650,
-      ingredients: ['Bife bovino', 'Arroz', 'Feijão', 'Batata', 'Cebola'],
-      allergens: []
-    },
-    {
-      name: 'Frango Grelhado',
-      description: 'Peito de frango grelhado temperado com ervas, arroz integral e legumes no vapor',
-      price: 16.00,
-      category: 'Pratos Saudáveis',
-      available: true,
-      prepTime: 20,
-      calories: 450,
-      ingredients: ['Peito de frango', 'Arroz integral', 'Brócolis', 'Cenoura', 'Abobrinha'],
-      allergens: []
-    },
-    {
-      name: 'Peixe Assado',
-      description: 'Filé de peixe assado com temperos especiais, arroz de brócolis e purê de batata',
-      price: 20.00,
-      category: 'Pratos Especiais',
-      available: true,
-      prepTime: 30,
-      calories: 520,
-      ingredients: ['Filé de peixe', 'Arroz', 'Brócolis', 'Batata', 'Alho'],
-      allergens: ['Peixe']
-    },
-    {
-      name: 'Feijoada Completa',
-      description: 'Feijoada tradicional com linguiça, bacon, carne seca, arroz, couve e farofa',
-      price: 22.00,
-      category: 'Pratos Tradicionais',
-      available: true,
-      prepTime: 45,
-      calories: 800,
-      ingredients: ['Feijão preto', 'Linguiça', 'Bacon', 'Carne seca', 'Arroz', 'Couve'],
-      allergens: []
-    },
-    {
-      name: 'Lasanha Bolonhesa',
-      description: 'Lasanha caseira com molho bolonhesa, queijo e massa artesanal',
-      price: 19.00,
-      category: 'Massas',
-      available: true,
-      prepTime: 35,
-      calories: 720,
-      ingredients: ['Massa de lasanha', 'Carne moída', 'Molho de tomate', 'Queijo mussarela'],
-      allergens: ['Glúten', 'Lactose']
-    }
-  ];
-
-  for (const item of menuItems) {
-    await prisma.menuItem.upsert({
-      where: { name: item.name },
-      update: {},
-      create: item
-    });
-  }
-
-  const settings = [
-    { key: 'business_name', value: 'Quentinhas da Casa' },
-    { key: 'business_phone', value: '(11) 99999-9999' },
-    { key: 'business_address', value: 'Rua Principal, 123 - Centro' },
-    { key: 'delivery_fee', value: '3.00' },
-    { key: 'min_order_value', value: '15.00' },
-    { key: 'working_hours_start', value: '10' },
-    { key: 'working_hours_end', value: '15' },
-    { key: 'working_weekends', value: 'true' },
-    { key: 'loyalty_points_rate', value: '1' },
-    { key: 'loyalty_discount_threshold', value: '100' },
-    { key: 'loyalty_discount_percentage', value: '20' }
-  ];
-
-  for (const setting of settings) {
-    await prisma.setting.upsert({
-      where: { key: setting.key },
-      update: {},
-      create: setting
-    });
-  }
-
-  console.log('✅ Dados iniciais criados com sucesso!');
-  console.log('👤 Usuário admin: admin@quentinhas.com / admin123');
-}
-
-main()
-  .catch((e) => {
-    console.error('❌ Erro ao criar dados iniciais:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
-EOF
-
-node setup/seed.js
+# NOTA: Removido o comando `node setup/seed.js` automaticamente
+# Você pode cadastrar os pratos manualmente pelo painel após a instalação
 
 log_info "Criando servidor principal..."
 cat > server.js << 'EOF'
@@ -2037,7 +1914,7 @@ echo ""
 echo "📱 PRÓXIMOS PASSOS:"
 echo "    1. ✅ Acessar: http://$PUBLIC_IP:3000"
 echo "    2. ✅ Configurar WhatsApp: http://$PUBLIC_IP:8080"
-echo "    3. ✅ Personalizar cardápio no painel"
+echo "    3. ✅ Cadastrar pratos manualmente no painel (Cardápio)"
 echo "    4. ✅ Testar pedidos via WhatsApp"
 echo ""
 
